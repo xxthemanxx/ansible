@@ -1,42 +1,48 @@
-- hosts: all
+---
+- name: System Maintenance and Conditional Reboot
+  hosts: all
   become: true
-  become_user: root
   tasks:
-    - name: Update apt repo and cache on all Debian/Ubuntu boxes
-      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    # --- DEBIAN / UBUNTU SECTION ---
+    - name: Update and clean APT packages
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes    # Removes unused dependency packages
+        autoclean: yes     # Cleans the local repository of retrieved package files
+      when: ansible_os_family == "Debian"
 
-    - name: Upgrade all packages on servers
-      apt: upgrade=dist force_apt_get=yes
-
-    - name: Remove useless packages from the cache
-      apt:
-        autoclean: yes
-
-    - name: Remove dependencies that are no longer required
-      apt:
-        autoremove: yes
-        purge: yes
-
-    - name: Check if a reboot is needed on all servers
+    - name: Check if reboot is required (Debian/Ubuntu)
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
       register: reboot_required_file
-      stat: path=/var/run/reboot-required
+      when: ansible_os_family == "Debian"
 
-    - name: Reboot the box if kernel updated
-      reboot:
-        connect_timeout: 5
-        reboot_timeout: 300
-        pre_reboot_delay: 0
-        post_reboot_delay: 60
-        test_command: uptime
-        search_paths:
-        - '/sbin'
-        - '/bin'
-        - '/usr/sbin'
-        - '/usr/bin'
-        - '/usr/local/sbin'
-        - '/sys/kernel'
-      when: reboot_required_file.stat.exists
-    - name: Wait for server to come back
-      wait_for_connection:
-        delay: 60
-        timeout: 300
+    # --- RED HAT / CENTOS SECTION ---
+    - name: Update and clean DNF packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        autoremove: yes    # Removes "leaf" packages that are no longer required
+      when: ansible_os_family == "RedHat"
+
+    - name: Clear DNF cache (Manual clean)
+      ansible.builtin.command: dnf clean all
+      when: ansible_os_family == "RedHat"
+      changed_when: false
+
+    - name: Check if reboot is required (Red Hat)
+      ansible.builtin.command: needs-restarting -r
+      register: reboot_required_command
+      failed_when: false
+      changed_when: false
+      when: ansible_os_family == "RedHat"
+
+    # --- REBOOT SECTION ---
+    - name: Reboot the machine if required
+      ansible.builtin.reboot:
+        msg: "System maintenance complete. Rebooting for updates."
+        reboot_timeout: 600
+      when: >
+        (ansible_os_family == "Debian" and reboot_required_file.stat.exists) or
+        (ansible_os_family == "RedHat" and reboot_required_command.rc == 1)
