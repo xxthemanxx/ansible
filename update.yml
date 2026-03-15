@@ -2,6 +2,7 @@
 - name: System Maintenance and Conditional Reboot
   hosts: all
   become: true
+  become_user: root
   tasks:
     # --- DEBIAN / UBUNTU SECTION ---
     - name: Update and clean APT packages
