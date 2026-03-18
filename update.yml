@@ -12,6 +12,12 @@
         autoremove: yes    # Removes unused dependency packages
         autoclean: yes     # Cleans the local repository of retrieved package files
       when: ansible_os_family == "Debian"
+      register: apt_update_result
+
+    - name: Log updated APT packages
+      ansible.builtin.debug:
+        var: apt_update_result.stdout_lines
+      when: ansible_os_family == "Debian" and apt_update_result.changed
 
     - name: Check if reboot is required (Debian/Ubuntu)
       ansible.builtin.stat:
@@ -26,6 +32,12 @@
         state: latest
         autoremove: yes    # Removes "leaf" packages that are no longer required
       when: ansible_os_family == "RedHat"
+      register: dnf_update_result
+
+    - name: Log updated DNF packages
+      ansible.builtin.debug:
+        var: dnf_update_result.results
+      when: ansible_os_family == "RedHat" and dnf_update_result.changed
 
     - name: Clear DNF cache (Manual clean)
       ansible.builtin.command: dnf clean all
