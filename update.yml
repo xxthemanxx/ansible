@@ -25,13 +25,19 @@
       register: reboot_required_file
       when: ansible_os_family == "Debian"
 
+    - name: Check if the reboot packages list file exists (Debian/Ubuntu)
+      ansible.builtin.stat:
+        path: /var/run/reboot-required.pkgs
+      register: reboot_pkgs_file
+      when: ansible_os_family == "Debian"
+
     - name: Check which packages require a reboot (Debian/Ubuntu)
       ansible.builtin.command: cat /var/run/reboot-required.pkgs
       register: debian_reboot_pkgs
       when: >
         ansible_os_family == "Debian" and 
-        reboot_required_file.stat is defined and 
-        reboot_required_file.stat.exists
+        reboot_pkgs_file.stat is defined and 
+        reboot_pkgs_file.stat.exists
       changed_when: false
 
     - name: Log packages requiring reboot (Debian/Ubuntu)
@@ -39,8 +45,8 @@
         msg: "Reboot required by the following packages: {{ debian_reboot_pkgs.stdout_lines }}"
       when: >
         ansible_os_family == "Debian" and 
-        reboot_required_file.stat is defined and 
-        reboot_required_file.stat.exists
+        reboot_pkgs_file.stat is defined and 
+        reboot_pkgs_file.stat.exists
 
     # --- RED HAT / CENTOS SECTION ---
     - name: Update and clean DNF packages
