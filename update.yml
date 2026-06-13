@@ -28,13 +28,19 @@
     - name: Check which packages require a reboot (Debian/Ubuntu)
       ansible.builtin.command: cat /var/run/reboot-required.pkgs
       register: debian_reboot_pkgs
-      when: ansible_os_family == "Debian" and reboot_required_file.stat.exists
+      when: >
+        ansible_os_family == "Debian" and 
+        reboot_required_file.stat is defined and 
+        reboot_required_file.stat.exists
       changed_when: false
 
     - name: Log packages requiring reboot (Debian/Ubuntu)
       ansible.builtin.debug:
         msg: "Reboot required by the following packages: {{ debian_reboot_pkgs.stdout_lines }}"
-      when: ansible_os_family == "Debian" and reboot_required_file.stat.exists
+      when: >
+        ansible_os_family == "Debian" and 
+        reboot_required_file.stat is defined and 
+        reboot_required_file.stat.exists
 
     # --- RED HAT / CENTOS SECTION ---
     - name: Update and clean DNF packages
@@ -65,7 +71,7 @@
     - name: Log reasons for reboot (Red Hat)
       ansible.builtin.debug:
         msg: "Reboot required. Details: {{ reboot_required_command.stdout_lines }}"
-      when: ansible_os_family == "RedHat" and reboot_required_command.rc == 1
+      when: ansible_os_family == "RedHat" and reboot_required_command.rc is defined and reboot_required_command.rc == 1
 
     # --- REBOOT SECTION ---
     - name: Reboot the machine if required
@@ -73,5 +79,5 @@
         msg: "System maintenance complete. Rebooting for updates."
         reboot_timeout: 600
       when: >
-        (ansible_os_family == "Debian" and reboot_required_file.stat.exists) or
-        (ansible_os_family == "RedHat" and reboot_required_command.rc == 1)
+        (ansible_os_family == "Debian" and reboot_required_file.stat is defined and reboot_required_file.stat.exists) or
+        (ansible_os_family == "RedHat" and reboot_required_command.rc is defined and reboot_required_command.rc == 1)
