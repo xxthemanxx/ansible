@@ -10,6 +10,7 @@
       debug:
         msg: "{{ item }}"
       loop: "{{ script_output.stdout_lines }}"
+
     - name: Run enable apps script
       command: /var/scripts/enableapps.sh
       register: script_output
@@ -18,6 +19,43 @@
       debug:
         msg: "{{ item }}"
       loop: "{{ script_output.stdout_lines }}"
+
+    - name: Pull latest HaRP daemon image
+      command: docker pull ghcr.io/nextcloud/nextcloud-appapi-harp:release
+      register: script_output
+      changed_when: true
+    - name: Display script output line by line
+      debug:
+        msg: "{{ item }}"
+      loop: "{{ script_output.stdout_lines }}"
+
+    - name: Stop existing HaRP container
+      command: docker stop appapi-harp
+      register: script_output
+      failed_when: false
+      changed_when: true
+    - name: Remove existing HaRP container
+      command: docker rm appapi-harp
+      register: script_output
+      failed_when: false
+      changed_when: true
+
+    - name: Start updated HaRP proxy container
+      command: >
+        docker run -d
+        --name appapi-harp
+        -h appapi-harp
+        --restart unless-stopped
+        --network host
+        -v /var/run/docker.sock:/var/run/docker.sock
+        ghcr.io/nextcloud/nextcloud-appapi-harp:release
+      register: script_output
+      changed_when: true
+    - name: Display script output line by line
+      debug:
+        msg: "{{ item }}"
+      loop: "{{ script_output.stdout_lines }}"
+
     - name: Run immich docker update
       command: /immich-app/update-immich.sh
       register: script_output
@@ -26,6 +64,7 @@
       debug:
         msg: "{{ item }}"
       loop: "{{ script_output.stdout_lines }}"
+
     - name: Delete NCBACKUP-OLD folder and all contents
       file:
         path: /mnt/NCBACKUP-OLD
