@@ -47,6 +47,9 @@
         -h appapi-harp
         --restart unless-stopped
         --network host
+        -e HP_SHARED_KEY="dfgfsdfg4543534fdfgdfgdffgsd56y756ujghjngh" \
+        -e NC_INSTANCE_URL="http://nextcloud.andrecloud.com" \
+        -e HP_EXAPPS_ADDRESS="localhost:8780" \
         -v /var/run/docker.sock:/var/run/docker.sock
         ghcr.io/nextcloud/nextcloud-appapi-harp:release
       register: script_output
